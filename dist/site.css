@@ -237,3 +237,19 @@ html[data-view="content"] #today,html[data-view="content"] #calendar{display:non
   .calendar-grid.weekly-grid .day.today .week-date.week-day-0,
   .calendar-grid.weekly-grid .day.today .week-date.week-day-6{color:#ffd83d!important}
 }
+
+.today-event-member-text{margin:7px 0 0;color:rgba(36,35,31,.72);font-size:15px;line-height:1.4}
+
+/* 일정 제목 줄바꿈 */
+.event{height:auto!important;white-space:normal!important;align-items:flex-start!important}
+.event-title{overflow:visible!important;text-overflow:clip!important;white-space:pre-line!important;overflow-wrap:anywhere;word-break:keep-all;line-height:1.35}
+.event-time{white-space:nowrap}
+.today-event h3,.day-schedule-card h3{white-space:pre-line;overflow-wrap:anywhere;word-break:keep-all;line-height:1.35}
+.manage-fields textarea.manage-name{min-height:3.2em}
+
+/* 일정상세 참여 멤버: 외곽선 제거, 이름 크기 +3px, 링크 스타일 */
+.detail-member-profile img{border:0!important}
+.detail-member-profile span{font-size:16px!important}
+a.detail-member-profile{color:inherit;text-decoration:none;cursor:pointer}
+a.detail-member-profile:hover span{text-decoration:underline}
+@media(max-width:600px){.detail-member-profile span{font-size:15px!important}}
