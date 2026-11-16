@@ -1,6 +1,3 @@
-const ADMIN_ID='natty09';
-const ADMIN_AUTH_API='https://yxpifubcykpwazjhisak.supabase.co/functions/v1/manage-danz-members';
-const ADMIN_AUTH_KEY='sb_publishable_7Rtd60BWnbA3zIAgVdUBqQ_AskVdf31';
 const NOTICE_BOARD='https://www.sooplive.com/station/natty09/board/122887767';
 const LIVE_API='https://live.sooplive.co.kr/afreeca/player_live_api.php';
 const OFFLINE_IMAGE='https://i.postimg.cc/4y3LpG9G/96341792257426596.png';
@@ -20,7 +17,7 @@ const dayDialog=document.querySelector('#dayDialog');
 const dayScheduleList=document.querySelector('#dayScheduleList');
 const mobileWeekMedia=window.matchMedia('(max-width:640px)');
 let view=new Date(Number(part('year')),Number(part('month'))-1,Number(part('day')));
-let isAdmin=localStorage.getItem('nyacho-admin')==='true'||sessionStorage.getItem('nyacho-admin')==='true';
+let isAdmin=false;
 let isDark=localStorage.getItem('nyacho-theme')==='dark';
 let manageDate='';
 const seed={};
@@ -36,8 +33,7 @@ const formatTime=value=>{if(!value)return'';const [hour,minute]=value.split(':')
 const createId=()=>globalThis.crypto?.randomUUID?.()||`event-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const normalizeEvent=(event,date='')=>[event[0]||'',event[1]||'personal',event[2]||'',event[3]||'',event[4]||'',event[5]||date,event[6]||event[5]||date,event[7]||''];
 
-function setAdmin(value,remember=false){isAdmin=value;localStorage.removeItem('nyacho-admin');sessionStorage.removeItem('nyacho-admin');if(value)(remember?localStorage:sessionStorage).setItem('nyacho-admin','true');else{localStorage.removeItem('nyacho-admin-token');sessionStorage.removeItem('nyacho-admin-token')}document.body.classList.toggle('admin-mode',value);loginBtn.classList.toggle('logged-in',value);loginBtn.title=value?'관리자 메뉴':'관리자 로그인';loginBtn.setAttribute('aria-label',loginBtn.title)}
-async function passwordAdminLogin(id,password,remember){const response=await fetch(ADMIN_AUTH_API,{method:'POST',headers:{apikey:ADMIN_AUTH_KEY,'Content-Type':'application/json'},body:JSON.stringify({action:'login',id,password,remember})}),result=await response.json().catch(()=>({}));if(!response.ok||!result.token)throw new Error(result.error||'아이디 또는 비밀번호가 올바르지 않아요.');localStorage.removeItem('nyacho-admin-token');sessionStorage.removeItem('nyacho-admin-token');(remember?localStorage:sessionStorage).setItem('nyacho-admin-token',result.token);setAdmin(true,remember)}
+function setAdmin(value){isAdmin=value;localStorage.removeItem('nyacho-admin');sessionStorage.removeItem('nyacho-admin');localStorage.removeItem('nyacho-admin-token');sessionStorage.removeItem('nyacho-admin-token');document.body.classList.toggle('admin-mode',value);loginBtn.classList.toggle('logged-in',value);loginBtn.title=value?'관리자 메뉴':'관리자 로그인';loginBtn.setAttribute('aria-label',loginBtn.title)}
 function setDark(value){isDark=value;localStorage.setItem('nyacho-theme',value?'dark':'light');document.body.classList.toggle('dark-mode',value);document.querySelector('#siteFavicon').href=value?'nyacho-dark-logo.png':'nyacho-uploaded-logo.png';darkModeBtn.title=value?'라이트모드 켜기':'다크모드 켜기';darkModeBtn.setAttribute('aria-label',darkModeBtn.title)}
 function save(){localStorage.setItem('nyacho-events',JSON.stringify(custom));window.nyachoFirebaseSave?.('schedules',custom)}
 function dateRange(start,end){if(!start||!end||start>end)return[];const dates=[];let cursor=new Date(`${start}T00:00:00Z`),last=new Date(`${end}T00:00:00Z`);while(cursor<=last){dates.push(cursor.toISOString().slice(0,10));cursor.setUTCDate(cursor.getUTCDate()+1)}return dates}
@@ -98,9 +94,9 @@ function render(){
 async function loadTodayNotice(){const output=document.querySelector('#noticeContent');try{const response=await fetch('/api/soop-notice',{cache:'no-store'});if(!response.ok)throw new Error('notice request failed');const data=await response.json();output.innerHTML='<strong></strong>';output.querySelector('strong').textContent=data.notice||'등록 된 공지가 없습니다.'}catch(error){output.innerHTML='<strong>등록 된 공지가 없습니다.</strong>'}}
 async function loadBroadcastStatus(){const image=document.querySelector('#broadcastImage'),status=document.querySelector('#broadcastStatus'),card=document.querySelector('#liveCard');const showOffline=()=>{image.src=OFFLINE_IMAGE;image.alt='냐쵸 오프라인 이미지';status.className='broadcast-status offline';status.querySelector('b').textContent='OFFLINE';card.classList.remove('is-live')};try{const response=await fetch('/api/soop-live',{cache:'no-store'});if(!response.ok)throw new Error('live status failed');const data=await response.json();if(!data.live){showOffline();return}image.onerror=()=>{image.onerror=null;image.src=OFFLINE_IMAGE};image.src=data.thumbnail;image.alt=data.title?`냐쵸 라이브: ${data.title}`:'냐쵸 라이브 방송 썸네일';status.className='broadcast-status live';status.querySelector('b').textContent='LIVE';card.classList.add('is-live')}catch(error){showOffline()}}
 
-loginBtn.onclick=()=>{if(isAdmin){setAdmin(false);render()}else{document.querySelector('#adminId').value='';document.querySelector('#adminPassword').value='';document.querySelector('#rememberLogin').checked=localStorage.getItem('nyacho-admin')==='true'||localStorage.getItem('nyacho-google-remember')==='true';document.querySelector('#loginError').textContent='';loginDialog.showModal()}};
+loginBtn.onclick=()=>{if(isAdmin){setAdmin(false);render()}else{document.querySelector('#adminId').value='';document.querySelector('#adminPassword').value='';document.querySelector('#rememberLogin').checked=localStorage.getItem('nyacho-auth-remember')==='true';document.querySelector('#loginError').textContent='';loginDialog.showModal()}};
 darkModeBtn.onclick=()=>setDark(!isDark);
-document.querySelector('#loginForm').onsubmit=async event=>{if(event.submitter?.value==='cancel')return;event.preventDefault();const id=document.querySelector('#adminId').value.trim(),password=document.querySelector('#adminPassword').value,remember=document.querySelector('#rememberLogin').checked,error=document.querySelector('#loginError'),submit=event.submitter;error.textContent='';submit.disabled=true;try{await passwordAdminLogin(id,password,remember);loginDialog.close();render()}catch(loginError){error.textContent=loginError.message||'로그인에 실패했습니다.'}finally{submit.disabled=false}};
+document.querySelector('#loginForm').onsubmit=async event=>{if(event.submitter?.value==='cancel')return;event.preventDefault();const id=document.querySelector('#adminId').value.trim(),password=document.querySelector('#adminPassword').value,remember=document.querySelector('#rememberLogin').checked,error=document.querySelector('#loginError'),submit=event.submitter;error.textContent='';submit.disabled=true;try{if(!window.nyachoFirebasePasswordLogin)throw new Error('Firebase 인증을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.');await window.nyachoFirebasePasswordLogin(id,password,remember);loginDialog.close();render()}catch(loginError){error.textContent=loginError.message||'로그인에 실패했습니다.'}finally{submit.disabled=false}};
 document.querySelector('#prevMonth').onclick=()=>{if(mobileWeekMedia.matches)view.setDate(view.getDate()-7);else{view.setDate(1);view.setMonth(view.getMonth()-1)}render()};
 document.querySelector('#nextMonth').onclick=()=>{if(mobileWeekMedia.matches)view.setDate(view.getDate()+7);else{view.setDate(1);view.setMonth(view.getMonth()+1)}render()};
 document.querySelector('#todayBtn').onclick=()=>{view=new Date(Number(part('year')),Number(part('month'))-1,Number(part('day')));render()};
