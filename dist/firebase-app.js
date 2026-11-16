@@ -28,9 +28,13 @@ const decodeFirestoreValue=value=>{
 };
 window.nyachoFirebaseSave=async(name,value)=>{const user=auth.currentUser;if(!ADMIN_EMAILS.has(user?.email?.toLowerCase()||'')){console.warn('Firestore save skipped: no authenticated administrator');alert('Firebase 관리자 로그인 후 다시 저장해 주세요.');return false}try{const payload=encodeFirestoreValue(value);if(payload===undefined)throw new Error('저장할 데이터가 없습니다.');const target=name==='schedules'?doc(db,'events','calendar'):doc(db,'siteData',name);await setDoc(target,{payload,updatedAt:Date.now(),updatedBy:user.email});return true}catch(error){const code=String(error?.code||'unknown').replace(/^firestore\//,'');console.warn('Firestore save failed',code,error);const message=code==='permission-denied'?'Firestore 보안 규칙에서 저장이 허용되지 않았습니다. events/calendar 쓰기 권한을 관리자 이메일에 허용해 주세요.':`Firebase 저장에 실패했습니다. 오류 코드: ${code}`;alert(message);return false}};
 
-onAuthStateChanged(auth,user=>{if(ADMIN_EMAILS.has(user?.email?.toLowerCase()||'')){const remember=localStorage.getItem('nyacho-auth-remember')==='true';window.nyachoSetAdmin?.(true,remember);}else{window.nyachoSetAdmin?.(false,false);if(user)signOut(auth)}});
-let hasEventsCalendar=false;
 const snapshotValue=snapshot=>{const data=snapshot.data()||{};return decodeFirestoreValue(data.payload??data.value)};
+// 메모: 모두 읽을 수 있고(siteData/memo 구독), 쓰기는 관리자만 가능합니다.
+let memoUnsubscribe=null;
+const startMemoSync=()=>{if(memoUnsubscribe)return;memoUnsubscribe=onSnapshot(doc(db,'siteData','memo'),snapshot=>{if(!snapshot.exists())return;window.dispatchEvent(new CustomEvent('nyachoMemoRemote',{detail:snapshotValue(snapshot)}))},error=>{console.warn('Firestore memo sync failed',error);memoUnsubscribe=null})};
+startMemoSync();
+onAuthStateChanged(auth,user=>{if(ADMIN_EMAILS.has(user?.email?.toLowerCase()||'')){const remember=localStorage.getItem('nyacho-auth-remember')==='true';window.nyachoSetAdmin?.(true,remember);startMemoSync()}else{window.nyachoSetAdmin?.(false,false);if(user)signOut(auth)}});
+let hasEventsCalendar=false;
 onSnapshot(doc(db,'events','calendar'),snapshot=>{hasEventsCalendar=snapshot.exists();if(hasEventsCalendar)window.dispatchEvent(new CustomEvent('nyachoSchedulesRemote',{detail:snapshotValue(snapshot)}))},error=>console.warn('Firestore events sync failed',error));
 onSnapshot(doc(db,'siteData','schedules'),snapshot=>{if(!hasEventsCalendar&&snapshot.exists())window.dispatchEvent(new CustomEvent('nyachoSchedulesRemote',{detail:snapshotValue(snapshot)}))},error=>console.warn('Firestore legacy schedules sync failed',error));
 for(const [name,eventName]of[['contents','nyachoContentsRemote'],['requests','nyachoRequestsRemote'],['settings','nyachoSettingsRemote'],['memberGroups','nyachoMemberGroupsRemote']]){onSnapshot(doc(db,'siteData',name),snapshot=>{if(!snapshot.exists())return;window.dispatchEvent(new CustomEvent(eventName,{detail:snapshotValue(snapshot)}))},error=>console.warn(`Firestore ${name} sync failed`,error))}

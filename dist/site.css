@@ -251,5 +251,44 @@ html[data-view="content"] #today,html[data-view="content"] #calendar{display:non
 .detail-member-profile img{border:0!important}
 .detail-member-profile span{font-size:16px!important}
 a.detail-member-profile{color:inherit;text-decoration:none;cursor:pointer}
-a.detail-member-profile:hover span{text-decoration:underline}
+a.detail-member-profile img{transition:transform .18s ease,box-shadow .18s ease}
+a.detail-member-profile:hover img,a.detail-member-profile:focus-visible img{transform:translateY(-5px);box-shadow:0 8px 14px rgba(0,0,0,.18)}
 @media(max-width:600px){.detail-member-profile span{font-size:15px!important}}
+
+/* 일정카드 제목/시간 +3px */
+.today-event h3{font-size:25px!important}
+.today-event time{font-size:21px!important}
+.day-schedule-card h3{font-size:26px!important}
+.day-schedule-card time{font-size:24px!important}
+
+/* 일정상세 팝업: 입력한 줄바꿈은 무시하고 공백으로 표시 (긴 제목은 자동 줄바꿈) */
+.day-schedule-card h3{white-space:normal!important}
+
+/* ===== 메모 버튼 / 메모지 팝업 ===== */
+#memoBtn.active{background:var(--yellow);color:#24231f}
+#memoPad{position:fixed;z-index:2000;display:flex;flex-direction:column;width:min(340px,92vw);height:380px;min-width:220px;min-height:180px;max-width:96vw;max-height:92vh;resize:both;overflow:hidden;border:1px solid #d9b92a;border-radius:6px 6px 10px 10px;background:#fff3a6;box-shadow:0 14px 30px rgba(0,0,0,.28),0 2px 0 rgba(255,255,255,.5) inset;color:#3b3320}
+#memoPad[hidden]{display:none}
+#memoPad.dragging{box-shadow:0 20px 38px rgba(0,0,0,.34);user-select:none}
+.memo-pad-head{display:flex;align-items:center;justify-content:space-between;flex:0 0 auto;height:38px;padding:0 8px 0 14px;background:#ffd83d;border-bottom:1px solid #d9b92a;cursor:grab;touch-action:none;user-select:none}
+#memoPad.dragging .memo-pad-head{cursor:grabbing}
+.memo-pad-head span{font-size:18px;color:#4a3d12}
+.memo-pad-close{width:28px;height:28px;padding:0;border:0;border-radius:50%;background:transparent;color:#4a3d12;font-size:22px;line-height:1;cursor:pointer}
+.memo-pad-close:hover{background:rgba(0,0,0,.1)}
+.memo-pad-text{flex:1 1 auto;width:100%;min-height:0;margin:0;padding:6px 16px 10px 52px;border:0;outline:0;resize:none;color:#3b3320;font:inherit;font-size:20px;line-height:32px;caret-color:#b8860b;background-color:#fff3a6;background-image:linear-gradient(90deg,transparent 40px,#e8777a 40px,#e8777a 42px,transparent 42px),repeating-linear-gradient(to bottom,transparent 0,transparent 31px,rgba(120,150,190,.55) 31px,rgba(120,150,190,.55) 32px);background-attachment:local;background-position:0 0,0 6px}
+.memo-pad-text::placeholder{color:rgba(59,51,32,.4)}
+.dark-mode #memoPad{border-color:#b89a1f}
+@media(max-width:600px){.memo-pad-text{font-size:18px}}
+
+/* ===== 메모: 오늘/메모 버튼 분리, 메모지 상단 검은색 ===== */
+.calendar-head-actions{grid-column:3;justify-self:end;display:flex;align-items:center;gap:10px}
+#memoPad.readonly .memo-pad-text{cursor:default}
+.month-controls #memoBtn{border:1px solid #dfdcd1!important;border-radius:999px!important;background:#fff;color:#292823;padding:9px 17px}
+.month-controls #memoBtn.active{background:var(--yellow);border-color:var(--yellow)!important;color:#24231f}
+.dark-mode .month-controls #memoBtn{background:#292a27;color:#efeee8;border-color:#454640!important}
+.dark-mode .month-controls #memoBtn.active{background:var(--yellow);color:#1f201c;border-color:var(--yellow)!important}
+@media(max-width:700px){.calendar-head-actions{grid-area:today;justify-self:end;gap:6px}}
+#memoPad{border-color:#151515}
+#memoPad .memo-pad-head{background:#151515;border-bottom:1px solid #000}
+#memoPad .memo-pad-head span,#memoPad .memo-pad-close{color:#fff}
+#memoPad .memo-pad-close:hover{background:rgba(255,255,255,.18)}
+.dark-mode #memoPad{border-color:#151515}
