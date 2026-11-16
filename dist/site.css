@@ -220,3 +220,20 @@ body[data-view="content"] #today,body[data-view="content"] #calendar{display:non
 .request-comment-likes,.dark-mode .request-comment-likes{background:var(--yellow)!important;border-color:var(--yellow)!important;color:#20211e!important}
 .request-comment-rank,.dark-mode .request-comment-rank{color:#20211e!important}
 html[data-view="content"] #today,html[data-view="content"] #calendar{display:none!important}html[data-view="schedule"] #content-board{display:none!important}html[data-view="content"] #content-board{display:block!important}
+
+/* Mobile: stack order = live card, today schedule, notice, requested content */
+@media(max-width:900px){
+  .hero-left-stack,.hero-right-stack{display:contents!important}
+  .hero-left-stack>.live-card{order:1!important;grid-column:1!important;grid-row:auto!important}
+  .hero-right-stack>.today-card{order:2!important;grid-column:1!important;grid-row:auto!important}
+  .hero-right-stack>.notice-card{order:3!important;grid-column:1!important;grid-row:auto!important}
+  .hero-left-stack>.request-panel{order:4!important;grid-column:1!important;grid-row:auto!important}
+}
+
+/* Mobile weekly schedule: today's date text in yellow */
+@media(max-width:640px){
+  .calendar-grid.weekly-grid .day.today .week-date .number,
+  .calendar-grid.weekly-grid .day.today .week-date .mobile-weekday,
+  .calendar-grid.weekly-grid .day.today .week-date.week-day-0,
+  .calendar-grid.weekly-grid .day.today .week-date.week-day-6{color:#ffd83d!important}
+}
