@@ -142,6 +142,6 @@ manageList.onclick=event=>{
   save();render();renderManager();
 };
 
-window.nyachoSetAdmin=setAdmin;window.nyachoRenderToday=renderToday;window.addEventListener('nyachoSchedulesRemote',event=>{custom=event.detail||{};localStorage.setItem('nyacho-events',JSON.stringify(custom));render()});
+window.nyachoSetAdmin=setAdmin;window.nyachoTypeIdFromLabel=label=>scheduleTypes.find(type=>type.label===label)?.id;window.nyachoRenderToday=renderToday;window.addEventListener('nyachoSchedulesRemote',event=>{custom=event.detail||{};localStorage.setItem('nyacho-events',JSON.stringify(custom));render()});
 const legend=document.querySelector('.legend');legend.innerHTML='';scheduleTypes.forEach(type=>{const item=document.createElement('span'),dot=document.createElement('i');dot.className='dot';dot.style.backgroundColor=type.color;item.append(dot,document.createTextNode(type.label));legend.append(item)});
 setAdmin(isAdmin,localStorage.getItem('nyacho-admin')==='true');setDark(isDark);render();loadTodayNotice();loadBroadcastStatus();setInterval(loadBroadcastStatus,60000);

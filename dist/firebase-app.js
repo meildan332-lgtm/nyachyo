@@ -50,12 +50,16 @@ const migrateLegacySchedules=async()=>{
   try{const snap=await getDoc(doc(db,'events','calendar'));if(!snap.exists())return;const legacy=snapshotValue(snap);if(legacy&&typeof legacy==='object'&&Object.keys(legacy).length)window.nyachoImportLegacySchedules?.(legacy)}catch(error){console.warn('Legacy schedule migration skipped',error)}
 };
 const dateRangeKeys=(start,end)=>{if(!start||!end||start>end)return[];const dates=[],last=new Date(`${end}T00:00:00Z`);for(let cursor=new Date(`${start}T00:00:00Z`);cursor<=last;cursor.setUTCDate(cursor.getUTCDate()+1))dates.push(cursor.toISOString().slice(0,10));return dates};
-const scheduleDocsToMap=items=>{const map={};items.map(item=>item.data()).filter(data=>data.eventId).sort((a,b)=>String(a.startDate||'').localeCompare(String(b.startDate||''))||(a.order||0)-(b.order||0)).forEach(data=>{const start=data.startDate||String(data['날짜']||'').slice(0,10),end=data.endDate||start,event=[data['일정제목']||'',data.typeId||'personal',data.timeValue||'',data['상세내용']||'',data.membersRaw||'',start,end,data.eventId];dateRangeKeys(start,end).forEach(date=>{(map[date]=map[date]||[]).push([...event])})});return map};
+// eventId 등 불러오기용 필드가 없는 문서(예: 콘솔에서 직접 만든 문서)도 한글 필드(날짜/시간/유형/참여멤버)로 복원합니다.
+const DEFAULT_TYPE_IDS={'개인':'personal','합방':'work','휴방':'live'};
+const timeTextToValue=text=>{const match=String(text||'').match(/^(오전|오후)?\s*(\d{1,2}):(\d{2})$/);if(!match)return'';let hour=Number(match[2]);if(match[1]==='오후')hour=hour%12+12;else if(match[1]==='오전')hour%=12;return`${String(hour).padStart(2,'0')}:${match[3]}`};
+const normalizeScheduleDoc=(id,data)=>{const dates=String(data['날짜']||'').match(/\d{4}-\d{2}-\d{2}/g)||[],idDate=(id.match(/^\d{4}-\d{2}-\d{2}/)||[])[0]||'',start=data.startDate||dates[0]||idDate,end=data.endDate||dates[1]||start;if(!start)return null;const label=data['유형'];return{...data,eventId:data.eventId||id,startDate:start,endDate:end,typeId:data.typeId||window.nyachoTypeIdFromLabel?.(label)||DEFAULT_TYPE_IDS[label]||label||'personal',timeValue:data.timeValue??timeTextToValue(data['시간']),membersRaw:data.membersRaw??(data['참여멤버']||''),order:data.order||0}};
+const scheduleDocsToMap=items=>{const map={};items.map(item=>normalizeScheduleDoc(item.id,item.data())).filter(Boolean).sort((a,b)=>a.startDate.localeCompare(b.startDate)||a.order-b.order||String(a.eventId).localeCompare(String(b.eventId))).forEach(data=>{const event=[data['일정제목']||'',data.typeId,data.timeValue,data['상세내용']||'',data.membersRaw,data.startDate,data.endDate,data.eventId];dateRangeKeys(data.startDate,data.endDate).forEach(date=>{(map[date]=map[date]||[]).push([...event])})});return map};
 onSnapshot(collection(db,'scheduleDocs'),snapshot=>{
   scheduleDocsLoaded=true;
-  hasNewScheduleDocs=snapshot.docs.some(item=>item.data().eventId);
+  hasNewScheduleDocs=!snapshot.empty;
   // 예전 형식 문서만 남아 있는 동안(이전 전)에는 화면을 비우지 않고 이전 단계로 넘어갑니다.
-  if(hasNewScheduleDocs||snapshot.empty)window.dispatchEvent(new CustomEvent('nyachoSchedulesRemote',{detail:scheduleDocsToMap(snapshot.docs)}));
+  window.dispatchEvent(new CustomEvent('nyachoSchedulesRemote',{detail:scheduleDocsToMap(snapshot.docs)}));
   migrateLegacySchedules();
 },error=>console.warn('Firestore scheduleDocs read failed',error));
 onAuthStateChanged(auth,user=>{if(ADMIN_EMAILS.has(user?.email?.toLowerCase()||'')){const remember=localStorage.getItem('nyacho-auth-remember')==='true';window.nyachoSetAdmin?.(true,remember);startMemoSync();migrateLegacySchedules()}else{window.nyachoSetAdmin?.(false,false);if(user)signOut(auth)}});
