@@ -52,10 +52,10 @@ function renderToday(){
   todaySchedule.classList.remove('empty-schedule');
   events.forEach(([name,type,time,description='',members='',startDate='',endDate=''])=>{
     const item=document.createElement('article');item.className=`today-event ${type}`;
-    item.innerHTML=`<div class="today-event-copy"><h3></h3>${description?'<p class="today-event-description"></p>':''}${members?'<p class="today-event-members"></p>':''}</div>${time?`<time>${formatTime(time)}</time>`:''}`;
+    item.innerHTML=`<div class="today-event-copy"><h3></h3>${description?'<p class="today-event-description"></p>':''}${members?'<div class="today-event-member-profiles"></div>':''}</div>${time?`<time>${formatTime(time)}</time>`:''}`;
     item.style.backgroundColor=typeColor[type]||'#ffd83d';item.querySelector('h3').textContent=name;
     if(description)item.querySelector('.today-event-description').textContent=description;
-    if(members)item.querySelector('.today-event-members').textContent=`참여 멤버 · ${members}`;
+    if(members){const output=item.querySelector('.today-event-member-profiles');if(window.nyachoRenderMemberProfiles)window.nyachoRenderMemberProfiles(output,members);else output.textContent=members}
     item.onclick=()=>openDay(TODAY_KEY);
     todaySchedule.append(item);
   });
@@ -126,6 +126,6 @@ manageList.onclick=event=>{
   save();render();renderManager();
 };
 
-window.nyachoSetAdmin=setAdmin;window.addEventListener('nyachoSchedulesRemote',event=>{custom=event.detail||{};localStorage.setItem('nyacho-events',JSON.stringify(custom));render()});
+window.nyachoSetAdmin=setAdmin;window.nyachoRenderToday=renderToday;window.addEventListener('nyachoSchedulesRemote',event=>{custom=event.detail||{};localStorage.setItem('nyacho-events',JSON.stringify(custom));render()});
 const legend=document.querySelector('.legend');legend.innerHTML='';scheduleTypes.forEach(type=>{const item=document.createElement('span'),dot=document.createElement('i');dot.className='dot';dot.style.backgroundColor=type.color;item.append(dot,document.createTextNode(type.label));legend.append(item)});
 setAdmin(isAdmin,localStorage.getItem('nyacho-admin')==='true');setDark(isDark);render();loadTodayNotice();loadBroadcastStatus();setInterval(loadBroadcastStatus,60000);
