@@ -195,3 +195,5 @@ body,body *{font-weight:400!important}.today-event{position:relative;align-items
    Former index.html inline styles
    ========================================================================== */
 .empty-schedule{min-height:190px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#969282;text-align:center}.empty-schedule>span{font-size:34px;filter:grayscale(1);opacity:.4}.empty-schedule>p{font-size:13px;margin:8px 0}.notice-link{color:#111;font-size:11px;font-weight:900;white-space:nowrap;text-decoration:none;border-bottom:2px solid var(--yellow)}.today-event{display:grid;grid-template-columns:1fr auto;gap:12px;width:100%;padding:15px 2px;border-bottom:1px dashed #c9c6b6;text-align:left}.today-event h3{font-size:14px;margin:5px 0 2px}.today-event p{font-size:11px;color:#888;margin:0}.today-event time{font-size:12px;font-weight:900;align-self:center}
+
+.broadcast-notice-card+.broadcast-notice-card{border-top:1px solid rgba(21,21,21,.12)}.dark-mode .broadcast-notice-card+.broadcast-notice-card{border-top-color:rgba(255,255,255,.12)}
