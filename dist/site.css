@@ -219,3 +219,4 @@ body[data-view="content"] #today,body[data-view="content"] #calendar{display:non
 .request-card-actions svg{width:22px;height:22px;flex:0 0 auto}
 .request-comment-likes,.dark-mode .request-comment-likes{background:var(--yellow)!important;border-color:var(--yellow)!important;color:#20211e!important}
 .request-comment-rank,.dark-mode .request-comment-rank{color:#20211e!important}
+html[data-view="content"] #today,html[data-view="content"] #calendar{display:none!important}html[data-view="schedule"] #content-board{display:none!important}html[data-view="content"] #content-board{display:block!important}
