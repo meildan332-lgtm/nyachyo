@@ -39,16 +39,19 @@ function buildScheduleDocs(){
   const seen=new Set(),list=[];
   Object.keys(custom).sort().forEach(date=>{(custom[date]||[]).forEach(event=>{
     const [name='',type='personal',time='',description='',members='',startDate='',endDate='',id='']=event;
-    if(id){if(seen.has(id))return;seen.add(id)}
-    const start=startDate||date,end=endDate||start;
+    const start=startDate||date,end=endDate||start,eventId=id||`${start}-${name}-${time}`;
+    if(seen.has(eventId))return;seen.add(eventId);
     const names=window.nyachoMemberNames?window.nyachoMemberNames(members):String(members).split(',').map(n=>n.trim()).filter(Boolean);
-    list.push({start,fields:{'일정제목':name,'날짜':end>start?`${start} ~ ${end}`:start,'시간':formatTime(time),'유형':typeLabel[type]||type,'참여멤버':names.join(', '),'상세내용':description}});
+    list.push({start,fields:{'일정제목':name,'날짜':end>start?`${start} ~ ${end}`:start,'시간':formatTime(time),'유형':typeLabel[type]||type,'참여멤버':names.join(', '),'상세내용':description,eventId,typeId:type,timeValue:time,membersRaw:members,startDate:start,endDate:end}});
   })});
   const count={},docs={};
-  list.forEach(({start,fields})=>{count[start]=(count[start]||0)+1;docs[count[start]===1?start:`${start}-${count[start]}`]=fields});
+  list.forEach(({start,fields})=>{count[start]=(count[start]||0)+1;fields.order=count[start];docs[count[start]===1?start:`${start}-${count[start]}`]=fields});
   return docs;
 }
-function save(){localStorage.setItem('nyacho-events',JSON.stringify(custom));window.nyachoFirebaseSave?.('schedules',custom);window.nyachoFirebaseSyncScheduleDocs?.(buildScheduleDocs())}
+/* 일정은 scheduleDocs 컬렉션에만 저장/로드합니다 (events 컬렉션 사용 안 함) */
+function save(){localStorage.setItem('nyacho-events',JSON.stringify(custom));window.nyachoFirebaseSyncScheduleDocs?.(buildScheduleDocs())}
+/* 최초 1회: 예전 events/calendar 데이터를 scheduleDocs로 옮깁니다 (관리자 로그인 시 자동 실행) */
+window.nyachoImportLegacySchedules=data=>{const migrated={};Object.keys(data||{}).forEach(date=>{migrated[date]=(data[date]||[]).map(event=>{const normalized=normalizeEvent(event,date);if(!normalized[7])normalized[7]=createId();return normalized})});custom=migrated;localStorage.setItem('nyacho-events',JSON.stringify(custom));window.nyachoFirebaseSyncScheduleDocs?.(buildScheduleDocs());render()};
 function dateRange(start,end){if(!start||!end||start>end)return[];const dates=[];let cursor=new Date(`${start}T00:00:00Z`),last=new Date(`${end}T00:00:00Z`);while(cursor<=last){dates.push(cursor.toISOString().slice(0,10));cursor.setUTCDate(cursor.getUTCDate()+1)}return dates}
 function timePickerMarkup(){return`<div class="manual-time-picker" data-period="am"><div class="period-buttons"><button type="button" class="period-button active" data-period="am">오전</button><button type="button" class="period-button" data-period="pm">오후</button></div><div class="time-number-fields"><input class="manage-hour" type="number" inputmode="numeric" min="1" max="12" placeholder="시" aria-label="시"><span>:</span><input class="manage-minute" type="number" inputmode="numeric" min="0" max="59" placeholder="분" aria-label="분"></div></div>`}
 function setPickerTime(item,value){const picker=item.querySelector('.manual-time-picker'),hourInput=item.querySelector('.manage-hour'),minuteInput=item.querySelector('.manage-minute');let period='am';if(value){const [hour,minute]=value.split(':').map(Number);period=hour>=12?'pm':'am';hourInput.value=hour%12||12;minuteInput.value=String(minute).padStart(2,'0')}picker.dataset.period=period;picker.querySelectorAll('.period-button').forEach(button=>button.classList.toggle('active',button.dataset.period===period))}
@@ -97,7 +100,7 @@ function render(){
   if(weekly){const firstDate=dates[0],lastDate=dates[6];title.textContent=firstDate.getMonth()===lastDate.getMonth()?`${firstDate.getMonth()+1}월 ${firstDate.getDate()} - ${lastDate.getDate()}`:`${firstDate.getMonth()+1}월 ${firstDate.getDate()} - ${lastDate.getMonth()+1}월 ${lastDate.getDate()}`}
   dates.forEach(actual=>{
     const d=actual.getDate(),muted=actual.getMonth()!==m,dateKey=key(actual.getFullYear(),actual.getMonth(),d),cell=document.createElement('div'),weekday=['일','월','화','수','목','금','토'][actual.getDay()];cell.className='day'+(muted?' muted':'')+(dateKey===TODAY_KEY?' today':'');cell.innerHTML=weekly?`<div class="week-date week-day-${actual.getDay()}"><span class="number">${d}</span><span class="mobile-weekday">${weekday}</span></div><div class="events"></div>`:`<span class="number">${d}</span><div class="events"></div>`;
-    const all=[...(seed[dateKey]||[]).map(event=>[...normalizeEvent(event,dateKey),false,null]),...(custom[dateKey]||[]).map((event,index)=>[...normalizeEvent(event,dateKey),true,index])];
+    const all=muted&&!weekly?[]:[...(seed[dateKey]||[]).map(event=>[...normalizeEvent(event,dateKey),false,null]),...(custom[dateKey]||[]).map((event,index)=>[...normalizeEvent(event,dateKey),true,index])];
     all.forEach(event=>{const [name,type,time,description='',members='',startDate='',endDate='',id='',own]=event;const el=document.createElement('div');el.className=`event ${type}${own?' custom':''}`;el.innerHTML=`<span class="event-title"></span>${time?'<span class="event-time"></span>':''}`;el.style.backgroundColor=typeColor[type]||'#ffd83d';el.querySelector('.event-title').textContent=name;if(time)el.querySelector('.event-time').textContent=formatTime(time);el.title='좌클릭: 이 날짜의 전체 일정'+(isAdmin&&own?' · 우클릭: 일정 관리':'');el.onclick=clickEvent=>{clickEvent.stopPropagation();openDay(dateKey)};el.oncontextmenu=contextEvent=>{if(!own||!isAdmin)return;contextEvent.preventDefault();contextEvent.stopPropagation();openManager(dateKey)};cell.querySelector('.events').append(el)});
     cell.onclick=()=>openDay(dateKey);cell.oncontextmenu=contextEvent=>{if(!isAdmin)return;contextEvent.preventDefault();openManager(dateKey)};cell.querySelector('.number').classList.add('date-button');cell.querySelector('.number').onclick=clickEvent=>{clickEvent.stopPropagation();openDay(dateKey)};grid.append(cell);
   });

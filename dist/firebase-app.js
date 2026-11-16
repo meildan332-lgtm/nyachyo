@@ -1,6 +1,6 @@
 import{initializeApp}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import{getAuth,GoogleAuthProvider,signInWithPopup,signInWithEmailAndPassword,signOut,onAuthStateChanged,setPersistence,browserLocalPersistence,browserSessionPersistence}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-import{getFirestore,doc,setDoc,onSnapshot,collection,getDocs,writeBatch}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+import{getFirestore,doc,setDoc,onSnapshot,collection,getDocs,getDoc,writeBatch}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 const firebaseConfig={apiKey:'AIzaSyAmBmSFCgaFd-yE2vsLItLWKtU0Z8U_bSg',authDomain:'nyachyo-97f7d.firebaseapp.com',projectId:'nyachyo-97f7d',storageBucket:'nyachyo-97f7d.firebasestorage.app',messagingSenderId:'892799826403',appId:'1:892799826403:web:efbffa3ff82921746c88d6',measurementId:'G-5WYFR3YCLB'};
 const ADMIN_EMAILS=new Set(['natty09@gmail.com','nyachyo29@gmail.com','rnskrns@gmail.com']);
@@ -26,11 +26,12 @@ const decodeFirestoreValue=value=>{
   if(typeof value!=='string')return value;
   try{return JSON.parse(value)}catch{return value}
 };
-window.nyachoFirebaseSave=async(name,value)=>{const user=auth.currentUser;if(!ADMIN_EMAILS.has(user?.email?.toLowerCase()||'')){console.warn('Firestore save skipped: no authenticated administrator');alert('Firebase 관리자 로그인 후 다시 저장해 주세요.');return false}try{const payload=encodeFirestoreValue(value);if(payload===undefined)throw new Error('저장할 데이터가 없습니다.');const target=name==='schedules'?doc(db,'events','calendar'):doc(db,'siteData',name);await setDoc(target,{payload,updatedAt:Date.now(),updatedBy:user.email});return true}catch(error){const code=String(error?.code||'unknown').replace(/^firestore\//,'');console.warn('Firestore save failed',code,error);const message=code==='permission-denied'?'Firestore 보안 규칙에서 저장이 허용되지 않았습니다. events/calendar 쓰기 권한을 관리자 이메일에 허용해 주세요.':`Firebase 저장에 실패했습니다. 오류 코드: ${code}`;alert(message);return false}};
+window.nyachoFirebaseSave=async(name,value)=>{const user=auth.currentUser;if(!ADMIN_EMAILS.has(user?.email?.toLowerCase()||'')){console.warn('Firestore save skipped: no authenticated administrator');alert('Firebase 관리자 로그인 후 다시 저장해 주세요.');return false}try{const payload=encodeFirestoreValue(value);if(payload===undefined)throw new Error('저장할 데이터가 없습니다.');const target=doc(db,'siteData',name);await setDoc(target,{payload,updatedAt:Date.now(),updatedBy:user.email});return true}catch(error){const code=String(error?.code||'unknown').replace(/^firestore\//,'');console.warn('Firestore save failed',code,error);const message=code==='permission-denied'?'Firestore 보안 규칙에서 저장이 허용되지 않았습니다. siteData 쓰기 권한을 관리자 이메일에 허용해 주세요.':`Firebase 저장에 실패했습니다. 오류 코드: ${code}`;alert(message);return false}};
 
 // 일정 문서: 일정이 저장될 때마다 scheduleDocs 컬렉션에 "문서 제목 = 날짜"로 동기화합니다.
-// 필드: 일정제목, 날짜, 시간, 유형, 참여멤버, 상세내용 (추가/수정/삭제가 모두 반영됩니다)
-const SCHEDULE_DOC_FIELDS=['일정제목','날짜','시간','유형','참여멤버','상세내용'];
+// 일정은 이 컬렉션에서만 읽고 씁니다. 보기용 필드(일정제목, 날짜, 시간, 유형, 참여멤버, 상세내용)와
+// 불러오기용 필드(eventId, typeId, timeValue, membersRaw, startDate, endDate, order)를 함께 저장합니다.
+const SCHEDULE_DOC_FIELDS=['일정제목','날짜','시간','유형','참여멤버','상세내용','eventId','typeId','timeValue','membersRaw','startDate','endDate','order'];
 let scheduleDocsQueue=Promise.resolve();
 window.nyachoFirebaseSyncScheduleDocs=docs=>{scheduleDocsQueue=scheduleDocsQueue.then(async()=>{const user=auth.currentUser;if(!ADMIN_EMAILS.has(user?.email?.toLowerCase()||''))return false;try{const existing=await getDocs(collection(db,'scheduleDocs')),current=new Map();existing.forEach(item=>current.set(item.id,item.data()));const ops=[];Object.entries(docs||{}).forEach(([id,fields])=>{const old=current.get(id);if(!old||SCHEDULE_DOC_FIELDS.some(name=>old[name]!==fields[name]))ops.push(batch=>batch.set(doc(db,'scheduleDocs',id),fields))});current.forEach((_data,id)=>{if(!(id in (docs||{})))ops.push(batch=>batch.delete(doc(db,'scheduleDocs',id)))});for(let i=0;i<ops.length;i+=400){const batch=writeBatch(db);ops.slice(i,i+400).forEach(op=>op(batch));await batch.commit()}return true}catch(error){const code=String(error?.code||'unknown').replace(/^firestore\//,'');console.warn('Firestore scheduleDocs sync failed',code,error);if(code==='permission-denied')alert('Firestore 보안 규칙에서 scheduleDocs 쓰기가 허용되지 않았습니다. scheduleDocs 컬렉션 쓰기 권한을 관리자 이메일에 허용해 주세요.');return false}});return scheduleDocsQueue};
 
@@ -39,8 +40,23 @@ const snapshotValue=snapshot=>{const data=snapshot.data()||{};return decodeFires
 let memoUnsubscribe=null;
 const startMemoSync=()=>{if(memoUnsubscribe)return;memoUnsubscribe=onSnapshot(doc(db,'siteData','memo'),snapshot=>{if(!snapshot.exists())return;window.dispatchEvent(new CustomEvent('nyachoMemoRemote',{detail:snapshotValue(snapshot)}))},error=>{console.warn('Firestore memo sync failed',error);memoUnsubscribe=null})};
 startMemoSync();
-onAuthStateChanged(auth,user=>{if(ADMIN_EMAILS.has(user?.email?.toLowerCase()||'')){const remember=localStorage.getItem('nyacho-auth-remember')==='true';window.nyachoSetAdmin?.(true,remember);startMemoSync()}else{window.nyachoSetAdmin?.(false,false);if(user)signOut(auth)}});
-let hasEventsCalendar=false;
-onSnapshot(doc(db,'events','calendar'),snapshot=>{hasEventsCalendar=snapshot.exists();if(hasEventsCalendar)window.dispatchEvent(new CustomEvent('nyachoSchedulesRemote',{detail:snapshotValue(snapshot)}))},error=>console.warn('Firestore events sync failed',error));
-onSnapshot(doc(db,'siteData','schedules'),snapshot=>{if(!hasEventsCalendar&&snapshot.exists())window.dispatchEvent(new CustomEvent('nyachoSchedulesRemote',{detail:snapshotValue(snapshot)}))},error=>console.warn('Firestore legacy schedules sync failed',error));
+// 일정 불러오기: scheduleDocs 컬렉션만 구독합니다.
+const isAdminUser=()=>ADMIN_EMAILS.has(auth.currentUser?.email?.toLowerCase()||'');
+let scheduleDocsLoaded=false,hasNewScheduleDocs=false,legacyChecked=false;
+const migrateLegacySchedules=async()=>{
+  // scheduleDocs에 새 형식 문서가 하나도 없을 때, 관리자 로그인 상태에서 딱 한 번 예전 events/calendar를 옮겨 담습니다.
+  if(legacyChecked||!scheduleDocsLoaded||hasNewScheduleDocs||!isAdminUser())return;
+  legacyChecked=true;
+  try{const snap=await getDoc(doc(db,'events','calendar'));if(!snap.exists())return;const legacy=snapshotValue(snap);if(legacy&&typeof legacy==='object'&&Object.keys(legacy).length)window.nyachoImportLegacySchedules?.(legacy)}catch(error){console.warn('Legacy schedule migration skipped',error)}
+};
+const dateRangeKeys=(start,end)=>{if(!start||!end||start>end)return[];const dates=[],last=new Date(`${end}T00:00:00Z`);for(let cursor=new Date(`${start}T00:00:00Z`);cursor<=last;cursor.setUTCDate(cursor.getUTCDate()+1))dates.push(cursor.toISOString().slice(0,10));return dates};
+const scheduleDocsToMap=items=>{const map={};items.map(item=>item.data()).filter(data=>data.eventId).sort((a,b)=>String(a.startDate||'').localeCompare(String(b.startDate||''))||(a.order||0)-(b.order||0)).forEach(data=>{const start=data.startDate||String(data['날짜']||'').slice(0,10),end=data.endDate||start,event=[data['일정제목']||'',data.typeId||'personal',data.timeValue||'',data['상세내용']||'',data.membersRaw||'',start,end,data.eventId];dateRangeKeys(start,end).forEach(date=>{(map[date]=map[date]||[]).push([...event])})});return map};
+onSnapshot(collection(db,'scheduleDocs'),snapshot=>{
+  scheduleDocsLoaded=true;
+  hasNewScheduleDocs=snapshot.docs.some(item=>item.data().eventId);
+  // 예전 형식 문서만 남아 있는 동안(이전 전)에는 화면을 비우지 않고 이전 단계로 넘어갑니다.
+  if(hasNewScheduleDocs||snapshot.empty)window.dispatchEvent(new CustomEvent('nyachoSchedulesRemote',{detail:scheduleDocsToMap(snapshot.docs)}));
+  migrateLegacySchedules();
+},error=>console.warn('Firestore scheduleDocs read failed',error));
+onAuthStateChanged(auth,user=>{if(ADMIN_EMAILS.has(user?.email?.toLowerCase()||'')){const remember=localStorage.getItem('nyacho-auth-remember')==='true';window.nyachoSetAdmin?.(true,remember);startMemoSync();migrateLegacySchedules()}else{window.nyachoSetAdmin?.(false,false);if(user)signOut(auth)}});
 for(const [name,eventName]of[['contents','nyachoContentsRemote'],['requests','nyachoRequestsRemote'],['settings','nyachoSettingsRemote'],['memberGroups','nyachoMemberGroupsRemote']]){onSnapshot(doc(db,'siteData',name),snapshot=>{if(!snapshot.exists())return;window.dispatchEvent(new CustomEvent(eventName,{detail:snapshotValue(snapshot)}))},error=>console.warn(`Firestore ${name} sync failed`,error))}
