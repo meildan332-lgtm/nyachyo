@@ -292,3 +292,5 @@ a.detail-member-profile:hover img,a.detail-member-profile:focus-visible img{tran
 #memoPad .memo-pad-head span,#memoPad .memo-pad-close{color:#fff}
 #memoPad .memo-pad-close:hover{background:rgba(255,255,255,.18)}
 .dark-mode #memoPad{border-color:#151515}
+/* 오늘 일정 카드: 일정 제목의 줄바꿈만 무시 (설명, 달력, 상세 팝업은 그대로) */
+.today-event h3{white-space:normal!important}
