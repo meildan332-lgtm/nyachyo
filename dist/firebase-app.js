@@ -1,6 +1,6 @@
 import{initializeApp}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import{getAuth,GoogleAuthProvider,signInWithPopup,signInWithEmailAndPassword,signOut,onAuthStateChanged,setPersistence,browserLocalPersistence,browserSessionPersistence}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-import{getFirestore,doc,setDoc,onSnapshot}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+import{getFirestore,doc,setDoc,onSnapshot,collection,getDocs,writeBatch}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 const firebaseConfig={apiKey:'AIzaSyAmBmSFCgaFd-yE2vsLItLWKtU0Z8U_bSg',authDomain:'nyachyo-97f7d.firebaseapp.com',projectId:'nyachyo-97f7d',storageBucket:'nyachyo-97f7d.firebasestorage.app',messagingSenderId:'892799826403',appId:'1:892799826403:web:efbffa3ff82921746c88d6',measurementId:'G-5WYFR3YCLB'};
 const ADMIN_EMAILS=new Set(['natty09@gmail.com','nyachyo29@gmail.com','rnskrns@gmail.com']);
@@ -27,6 +27,12 @@ const decodeFirestoreValue=value=>{
   try{return JSON.parse(value)}catch{return value}
 };
 window.nyachoFirebaseSave=async(name,value)=>{const user=auth.currentUser;if(!ADMIN_EMAILS.has(user?.email?.toLowerCase()||'')){console.warn('Firestore save skipped: no authenticated administrator');alert('Firebase 관리자 로그인 후 다시 저장해 주세요.');return false}try{const payload=encodeFirestoreValue(value);if(payload===undefined)throw new Error('저장할 데이터가 없습니다.');const target=name==='schedules'?doc(db,'events','calendar'):doc(db,'siteData',name);await setDoc(target,{payload,updatedAt:Date.now(),updatedBy:user.email});return true}catch(error){const code=String(error?.code||'unknown').replace(/^firestore\//,'');console.warn('Firestore save failed',code,error);const message=code==='permission-denied'?'Firestore 보안 규칙에서 저장이 허용되지 않았습니다. events/calendar 쓰기 권한을 관리자 이메일에 허용해 주세요.':`Firebase 저장에 실패했습니다. 오류 코드: ${code}`;alert(message);return false}};
+
+// 일정 문서: 일정이 저장될 때마다 scheduleDocs 컬렉션에 "문서 제목 = 날짜"로 동기화합니다.
+// 필드: 일정제목, 날짜, 시간, 유형, 참여멤버, 상세내용 (추가/수정/삭제가 모두 반영됩니다)
+const SCHEDULE_DOC_FIELDS=['일정제목','날짜','시간','유형','참여멤버','상세내용'];
+let scheduleDocsQueue=Promise.resolve();
+window.nyachoFirebaseSyncScheduleDocs=docs=>{scheduleDocsQueue=scheduleDocsQueue.then(async()=>{const user=auth.currentUser;if(!ADMIN_EMAILS.has(user?.email?.toLowerCase()||''))return false;try{const existing=await getDocs(collection(db,'scheduleDocs')),current=new Map();existing.forEach(item=>current.set(item.id,item.data()));const ops=[];Object.entries(docs||{}).forEach(([id,fields])=>{const old=current.get(id);if(!old||SCHEDULE_DOC_FIELDS.some(name=>old[name]!==fields[name]))ops.push(batch=>batch.set(doc(db,'scheduleDocs',id),fields))});current.forEach((_data,id)=>{if(!(id in (docs||{})))ops.push(batch=>batch.delete(doc(db,'scheduleDocs',id)))});for(let i=0;i<ops.length;i+=400){const batch=writeBatch(db);ops.slice(i,i+400).forEach(op=>op(batch));await batch.commit()}return true}catch(error){const code=String(error?.code||'unknown').replace(/^firestore\//,'');console.warn('Firestore scheduleDocs sync failed',code,error);if(code==='permission-denied')alert('Firestore 보안 규칙에서 scheduleDocs 쓰기가 허용되지 않았습니다. scheduleDocs 컬렉션 쓰기 권한을 관리자 이메일에 허용해 주세요.');return false}});return scheduleDocsQueue};
 
 const snapshotValue=snapshot=>{const data=snapshot.data()||{};return decodeFirestoreValue(data.payload??data.value)};
 // 메모: 모두 읽을 수 있고(siteData/memo 구독), 쓰기는 관리자만 가능합니다.

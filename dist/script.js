@@ -35,7 +35,20 @@ const normalizeEvent=(event,date='')=>[event[0]||'',event[1]||'personal',event[2
 
 function setAdmin(value){isAdmin=value;localStorage.removeItem('nyacho-admin');sessionStorage.removeItem('nyacho-admin');localStorage.removeItem('nyacho-admin-token');sessionStorage.removeItem('nyacho-admin-token');document.body.classList.toggle('admin-mode',value);loginBtn.classList.toggle('logged-in',value);loginBtn.title=value?'관리자 메뉴':'관리자 로그인';loginBtn.setAttribute('aria-label',loginBtn.title)}
 function setDark(value){isDark=value;localStorage.setItem('nyacho-theme',value?'dark':'light');document.body.classList.toggle('dark-mode',value);document.querySelector('#siteFavicon').href=value?'nyacho-dark-logo.png':'nyacho-uploaded-logo.png';darkModeBtn.title=value?'라이트모드 켜기':'다크모드 켜기';darkModeBtn.setAttribute('aria-label',darkModeBtn.title)}
-function save(){localStorage.setItem('nyacho-events',JSON.stringify(custom));window.nyachoFirebaseSave?.('schedules',custom)}
+function buildScheduleDocs(){
+  const seen=new Set(),list=[];
+  Object.keys(custom).sort().forEach(date=>{(custom[date]||[]).forEach(event=>{
+    const [name='',type='personal',time='',description='',members='',startDate='',endDate='',id='']=event;
+    if(id){if(seen.has(id))return;seen.add(id)}
+    const start=startDate||date,end=endDate||start;
+    const names=window.nyachoMemberNames?window.nyachoMemberNames(members):String(members).split(',').map(n=>n.trim()).filter(Boolean);
+    list.push({start,fields:{'일정제목':name,'날짜':end>start?`${start} ~ ${end}`:start,'시간':formatTime(time),'유형':typeLabel[type]||type,'참여멤버':names.join(', '),'상세내용':description}});
+  })});
+  const count={},docs={};
+  list.forEach(({start,fields})=>{count[start]=(count[start]||0)+1;docs[count[start]===1?start:`${start}-${count[start]}`]=fields});
+  return docs;
+}
+function save(){localStorage.setItem('nyacho-events',JSON.stringify(custom));window.nyachoFirebaseSave?.('schedules',custom);window.nyachoFirebaseSyncScheduleDocs?.(buildScheduleDocs())}
 function dateRange(start,end){if(!start||!end||start>end)return[];const dates=[];let cursor=new Date(`${start}T00:00:00Z`),last=new Date(`${end}T00:00:00Z`);while(cursor<=last){dates.push(cursor.toISOString().slice(0,10));cursor.setUTCDate(cursor.getUTCDate()+1)}return dates}
 function timePickerMarkup(){return`<div class="manual-time-picker" data-period="am"><div class="period-buttons"><button type="button" class="period-button active" data-period="am">오전</button><button type="button" class="period-button" data-period="pm">오후</button></div><div class="time-number-fields"><input class="manage-hour" type="number" inputmode="numeric" min="1" max="12" placeholder="시" aria-label="시"><span>:</span><input class="manage-minute" type="number" inputmode="numeric" min="0" max="59" placeholder="분" aria-label="분"></div></div>`}
 function setPickerTime(item,value){const picker=item.querySelector('.manual-time-picker'),hourInput=item.querySelector('.manage-hour'),minuteInput=item.querySelector('.manage-minute');let period='am';if(value){const [hour,minute]=value.split(':').map(Number);period=hour>=12?'pm':'am';hourInput.value=hour%12||12;minuteInput.value=String(minute).padStart(2,'0')}picker.dataset.period=period;picker.querySelectorAll('.period-button').forEach(button=>button.classList.toggle('active',button.dataset.period===period))}
