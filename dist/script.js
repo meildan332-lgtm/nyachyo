@@ -29,7 +29,7 @@ const typeLabel=Object.fromEntries(scheduleTypes.map(type=>[type.id,type.label])
 const typeColor=Object.fromEntries(scheduleTypes.map(type=>[type.id,type.color]));
 const escapeHtml=value=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const typeOptions=()=>scheduleTypes.map(type=>`<option value="${escapeHtml(type.id)}">${escapeHtml(type.label)}</option>`).join('');
-const formatTime=value=>{if(!value)return'';const [hour,minute]=value.split(':').map(Number),period=hour<12?'오전':'오후',displayHour=hour%12||12;return`${period}${displayHour}:${String(minute).padStart(2,'0')}`};
+const formatTime=value=>{if(!value)return'';const [hour,minute]=value.split(':').map(Number),period=hour<12?'오전':'오후',displayHour=hour%12||12;return`${period} ${displayHour}:${String(minute).padStart(2,'0')}`};
 const createId=()=>globalThis.crypto?.randomUUID?.()||`event-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const normalizeEvent=(event,date='')=>[event[0]||'',event[1]||'personal',event[2]||'',event[3]||'',event[4]||'',event[5]||date,event[6]||event[5]||date,event[7]||''];
 
