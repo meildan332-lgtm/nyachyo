@@ -10,7 +10,7 @@ module.exports=async function handler(req,res){
     if(payload?.code&&payload.code!=='SUCCESS')throw new Error(payload.message||payload.code);
     const rows=(Array.isArray(payload?.contents)?payload.contents:[])
       .sort((a,b)=>String(b.regDate||b.reg_date||'').localeCompare(String(a.regDate||a.reg_date||'')))
-      .slice(0,3);
+      .slice(0,2);
     const notices=rows.map(row=>({
       title:clean(row.titleName||row.title||row.subject),
       excerpt:clean(row.content?.content||row.contents).slice(0,220),
