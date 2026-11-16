@@ -294,3 +294,7 @@ a.detail-member-profile:hover img,a.detail-member-profile:focus-visible img{tran
 .dark-mode #memoPad{border-color:#151515}
 /* 오늘 일정 카드: 일정 제목의 줄바꿈만 무시 (설명, 달력, 상세 팝업은 그대로) */
 .today-event h3{white-space:normal!important}
+/* ===== 달력: 일정이 많아 한 칸이 늘어나면 같은 주(행) 전체가 함께 늘어남 ===== */
+/* 기존 aspect-ratio:1/1 은 칸 하나만 늘어나게 만들어서, 정사각형 비율을 가상요소로 대체합니다. */
+.calendar-grid:not(.weekly-grid) .day{aspect-ratio:auto;display:flow-root;align-self:stretch;min-height:0!important}
+.calendar-grid:not(.weekly-grid) .day::before{content:'';float:left;width:0;padding-top:100%}
