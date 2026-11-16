@@ -1,3 +1,0 @@
-.hero-grid{grid-template-columns:minmax(0,1.75fr) minmax(330px,1fr);align-items:start}.photo-card{aspect-ratio:16/9;width:100%;min-height:0!important}.photo-card>a,.photo-card img{width:100%;height:100%;min-height:0!important;max-height:none!important}.photo-card img{aspect-ratio:16/9;object-fit:cover;object-position:center}.today-card{min-height:100%}
-@media(max-width:900px){.hero-grid{grid-template-columns:1fr}.photo-card{aspect-ratio:16/9}.photo-card>a,.photo-card img{min-height:0!important;max-height:none!important}.today-card{min-height:0}}
-@media(max-width:640px){.photo-card,.photo-card img{aspect-ratio:16/9}.photo-card img{object-position:center}}

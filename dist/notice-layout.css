@@ -1,2 +1,0 @@
-.notice-block{margin-top:22px}.notice-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 4px 10px}.notice-title{margin:0;font-size:23px;font-weight:400;color:#292823}.notice-heading .notice-link{flex:0 0 auto;padding:7px 11px;border:0;border-radius:999px;background:#f3f1e8;font-size:13px}.today-notice{margin-top:0}.dark-mode .notice-title{color:#f0efe9}.dark-mode .notice-heading .notice-link{background:var(--yellow);color:#171813}
-@media(max-width:640px){.notice-title{font-size:21px;margin-bottom:8px}}
