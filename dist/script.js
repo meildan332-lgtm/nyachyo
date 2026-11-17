@@ -99,13 +99,62 @@ function render(){
   else{const first=new Date(y,m,1).getDay(),last=new Date(y,m+1,0).getDate(),prevLast=new Date(y,m,0).getDate(),totalCells=Math.max(35,Math.ceil((first+last)/7)*7);for(let i=0;i<totalCells;i++){let d,month=m;if(i<first){d=prevLast-first+i+1;month=m-1}else if(i>=first+last){d=i-first-last+1;month=m+1}else d=i-first+1;dates.push(new Date(y,month,d))}}
   if(weekly){const firstDate=dates[0],lastDate=dates[6];title.textContent=firstDate.getMonth()===lastDate.getMonth()?`${firstDate.getMonth()+1}월 ${firstDate.getDate()} - ${lastDate.getDate()}`:`${firstDate.getMonth()+1}월 ${firstDate.getDate()} - ${lastDate.getMonth()+1}월 ${lastDate.getDate()}`}
   dates.forEach(actual=>{
-    const d=actual.getDate(),muted=actual.getMonth()!==m,dateKey=key(actual.getFullYear(),actual.getMonth(),d),cell=document.createElement('div'),weekday=['일','월','화','수','목','금','토'][actual.getDay()];cell.className='day'+(muted?' muted':'')+(dateKey===TODAY_KEY?' today':'');cell.innerHTML=weekly?`<div class="week-date week-day-${actual.getDay()}"><span class="number">${d}</span><span class="mobile-weekday">${weekday}</span></div><div class="events"></div>`:`<span class="number">${d}</span><div class="events"></div>`;
+    const d=actual.getDate(),muted=actual.getMonth()!==m,dateKey=key(actual.getFullYear(),actual.getMonth(),d),cell=document.createElement('div'),weekday=['일','월','화','수','목','금','토'][actual.getDay()];cell.className='day'+(muted?' muted':'')+(dateKey===TODAY_KEY?' today':'');cell.dataset.date=dateKey;cell.innerHTML=weekly?`<div class="week-date week-day-${actual.getDay()}"><span class="number">${d}</span><span class="mobile-weekday">${weekday}</span></div><div class="events"></div>`:`<span class="number">${d}</span><div class="events"></div>`;
     const all=muted&&!weekly?[]:[...(seed[dateKey]||[]).map(event=>[...normalizeEvent(event,dateKey),false,null]),...(custom[dateKey]||[]).map((event,index)=>[...normalizeEvent(event,dateKey),true,index])];
-    all.forEach(event=>{const [name,type,time,description='',members='',startDate='',endDate='',id='',own]=event;const el=document.createElement('div');el.className=`event ${type}${own?' custom':''}`;el.innerHTML=`<span class="event-title"></span>${time?'<span class="event-time"></span>':''}`;el.style.backgroundColor=typeColor[type]||'#ffd83d';el.querySelector('.event-title').textContent=name;if(time)el.querySelector('.event-time').textContent=formatTime(time);el.title='좌클릭: 이 날짜의 전체 일정'+(isAdmin&&own?' · 우클릭: 일정 관리':'');el.onclick=clickEvent=>{clickEvent.stopPropagation();openDay(dateKey)};el.oncontextmenu=contextEvent=>{if(!own||!isAdmin)return;contextEvent.preventDefault();contextEvent.stopPropagation();openManager(dateKey)};cell.querySelector('.events').append(el)});
+    all.forEach(event=>{const [name,type,time,description='',members='',startDate='',endDate='',id='',own,eventIndex]=event;const el=document.createElement('div');el.className=`event ${type}${own?' custom':''}`;if(own){el.draggable=true;el.dataset.date=dateKey;el.dataset.index=eventIndex}el.innerHTML=`<span class="event-title"></span>${time?'<span class="event-time"></span>':''}`;el.style.backgroundColor=typeColor[type]||'#ffd83d';el.querySelector('.event-title').textContent=name;if(time)el.querySelector('.event-time').textContent=formatTime(time);el.title='좌클릭: 이 날짜의 전체 일정'+(isAdmin&&own?' · 우클릭: 일정 관리 · 드래그: 날짜/순서 이동':'');el.onclick=clickEvent=>{clickEvent.stopPropagation();openDay(dateKey)};el.oncontextmenu=contextEvent=>{if(!own||!isAdmin)return;contextEvent.preventDefault();contextEvent.stopPropagation();openManager(dateKey)};cell.querySelector('.events').append(el)});
     cell.onclick=()=>openDay(dateKey);cell.oncontextmenu=contextEvent=>{if(!isAdmin)return;contextEvent.preventDefault();openManager(dateKey)};cell.querySelector('.number').classList.add('date-button');cell.querySelector('.number').onclick=clickEvent=>{clickEvent.stopPropagation();openDay(dateKey)};grid.append(cell);
   });
   renderToday();
 }
+
+/* ---- 월간 일정 드래그 앤 드롭 (관리자): 다른 날짜로 이동 + 같은 날 순서 변경 ---- */
+let dragInfo=null;
+const clearDropMarks=()=>grid.querySelectorAll('.drag-over,.drop-before,.drop-after,.dragging').forEach(el=>el.classList.remove('drag-over','drop-before','drop-after','dragging'));
+const shiftDateKey=(dateKey,days)=>{const d=new Date(`${dateKey}T00:00:00Z`);d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10)};
+const daysBetween=(from,to)=>Math.round((Date.parse(`${to}T00:00:00Z`)-Date.parse(`${from}T00:00:00Z`))/86400000);
+const dropIsAfter=(event,target)=>{const rect=target.getBoundingClientRect();return event.clientY>rect.top+rect.height/2};
+function moveEvent(fromDate,fromIndex,toDate,targetRef,after){
+  const list=custom[fromDate],moving=list?.[fromIndex];if(!moving)return false;
+  const movingId=moving[7];
+  const insertAt=arr=>{let at=arr.length;if(targetRef&&targetRef!==moving&&!(movingId&&targetRef[7]===movingId)){const i=arr.indexOf(targetRef);if(i>=0)at=i+(after?1:0)}return at};
+  if(fromDate===toDate){
+    if(targetRef===moving)return false;
+    list.splice(fromIndex,1);
+    list.splice(insertAt(list),0,moving);
+    return list.indexOf(moving)!==fromIndex;
+  }
+  // 여러 날 일정은 드래그한 날짜가 옮겨진 만큼 전체 기간을 같이 이동합니다.
+  const delta=daysBetween(fromDate,toDate),start=shiftDateKey(moving[5]||fromDate,delta),end=shiftDateKey(moving[6]||moving[5]||fromDate,delta);
+  const updated=[...moving];updated[5]=start;updated[6]=end;if(!updated[7])updated[7]=createId();
+  removeEventOccurrences(moving,fromDate,fromIndex);
+  dateRange(start,end).forEach(date=>{const arr=custom[date]=custom[date]||[];if(date===toDate)arr.splice(insertAt(arr),0,[...updated]);else arr.push([...updated])});
+  return true;
+}
+grid.addEventListener('dragstart',event=>{
+  const el=event.target.closest?.('.event.custom');if(!el)return;
+  if(!isAdmin){event.preventDefault();return}
+  dragInfo={date:el.dataset.date,index:Number(el.dataset.index)};
+  event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',el.textContent);
+  requestAnimationFrame(()=>el.classList.add('dragging'));
+});
+grid.addEventListener('dragover',event=>{
+  if(!dragInfo)return;const cell=event.target.closest('.day');if(!cell)return;
+  event.preventDefault();event.dataTransfer.dropEffect='move';
+  grid.querySelectorAll('.drag-over,.drop-before,.drop-after').forEach(el=>el.classList.remove('drag-over','drop-before','drop-after'));
+  cell.classList.add('drag-over');
+  const target=event.target.closest('.event.custom');
+  if(target&&!target.classList.contains('dragging'))target.classList.add(dropIsAfter(event,target)?'drop-after':'drop-before');
+});
+grid.addEventListener('dragleave',event=>{if(!grid.contains(event.relatedTarget))grid.querySelectorAll('.drag-over,.drop-before,.drop-after').forEach(el=>el.classList.remove('drag-over','drop-before','drop-after'))});
+grid.addEventListener('drop',event=>{
+  if(!dragInfo)return;const cell=event.target.closest('.day');if(!cell)return;
+  event.preventDefault();const info=dragInfo;dragInfo=null;
+  const targetEl=event.target.closest('.event.custom');let targetRef=null,after=false;
+  if(targetEl){targetRef=custom[targetEl.dataset.date]?.[Number(targetEl.dataset.index)]||null;after=dropIsAfter(event,targetEl)}
+  if(isAdmin&&moveEvent(info.date,info.index,cell.dataset.date,targetRef,after))save();
+  render();
+});
+grid.addEventListener('dragend',()=>{dragInfo=null;clearDropMarks()});
 
 function noticeRelativeTime(value){if(!value)return'';const parsed=new Date(String(value).replace(' ','T')+'+09:00');if(Number.isNaN(parsed.getTime()))return'';const minutes=Math.max(0,Math.floor((Date.now()-parsed.getTime())/60000));if(minutes<1)return'방금 전';if(minutes<60)return`${minutes}분 전`;const hours=Math.floor(minutes/60);if(hours<24)return`${hours}시간 전`;const days=Math.floor(hours/24);return days<30?`${days}일 전`:String(value).slice(0,10).replaceAll('-','.');}
 function noticeMetric(icon,value,label){const span=document.createElement('span');span.className='notice-metric';span.setAttribute('aria-label',label);span.textContent=`${icon} ${Number(value||0).toLocaleString('ko-KR')}`;return span}

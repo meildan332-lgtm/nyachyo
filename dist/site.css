@@ -304,3 +304,9 @@ a.detail-member-profile:hover img,a.detail-member-profile:focus-visible img{tran
 /* Top tabs: font size +5 (18px -> 23px); keep 18px on small screens to avoid overflow */
 .topbar .top-tabs a,.topbar .top-tabs a.active,.topbar .top-tabs a:hover{font-size:23px!important}
 @media(max-width:700px){.topbar .top-tabs a,.topbar .top-tabs a.active,.topbar .top-tabs a:hover{font-size:18px!important}}
+
+/* 월간 일정 드래그 앤 드롭 */
+.admin-mode .event.custom{cursor:grab}.admin-mode .event.custom:active{cursor:grabbing}
+.event.dragging{opacity:.35}
+.calendar-grid .day.drag-over{background:color-mix(in srgb,var(--yellow) 20%,transparent)!important;box-shadow:inset 0 0 0 2px var(--yellow)}
+.event.drop-before{box-shadow:0 -3px 0 var(--yellow)}.event.drop-after{box-shadow:0 3px 0 var(--yellow)}
