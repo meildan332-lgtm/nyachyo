@@ -298,3 +298,9 @@ a.detail-member-profile:hover img,a.detail-member-profile:focus-visible img{tran
 /* 기존 aspect-ratio:1/1 은 칸 하나만 늘어나게 만들어서, 정사각형 비율을 가상요소로 대체합니다. */
 .calendar-grid:not(.weekly-grid) .day{aspect-ratio:auto;display:flow-root;align-self:stretch;min-height:0!important}
 .calendar-grid:not(.weekly-grid) .day::before{content:'';float:left;width:0;padding-top:100%}
+/* Dark mode: keep active tab text light (not black) */
+.dark-mode .topbar .top-tabs a.active,.dark-mode .top-tabs a.active:hover{color:#fff!important}
+
+/* Top tabs: font size +5 (18px -> 23px); keep 18px on small screens to avoid overflow */
+.topbar .top-tabs a{font-size:23px!important}
+@media(max-width:700px){.topbar .top-tabs a{font-size:18px!important}}
