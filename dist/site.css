@@ -302,5 +302,5 @@ a.detail-member-profile:hover img,a.detail-member-profile:focus-visible img{tran
 .dark-mode .topbar .top-tabs a.active,.dark-mode .top-tabs a.active:hover{color:#fff!important}
 
 /* Top tabs: font size +5 (18px -> 23px); keep 18px on small screens to avoid overflow */
-.topbar .top-tabs a{font-size:23px!important}
-@media(max-width:700px){.topbar .top-tabs a{font-size:18px!important}}
+.topbar .top-tabs a,.topbar .top-tabs a.active,.topbar .top-tabs a:hover{font-size:23px!important}
+@media(max-width:700px){.topbar .top-tabs a,.topbar .top-tabs a.active,.topbar .top-tabs a:hover{font-size:18px!important}}
